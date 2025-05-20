@@ -87,6 +87,16 @@ def show_test_page():
 
         selected_field_name = st.selectbox("Фанро интиҳоб кунед:", field_names)
         selected_field_id = field_dict[selected_field_name]
+        #field_id = st.session_state.selected_field_id
+
+        # Agar hali session_state ichida yo‘q bo‘lsa, uni yaratamiz
+        if "selected_field_id" not in st.session_state:
+            st.session_state.selected_field_id = selected_field_id
+        else:
+            st.session_state.selected_field_id = selected_field_id  # har safar yangilanishi uchun
+
+        # Endi ishlatish mumkin
+        field_id = st.session_state.selected_field_id
 
         # Testlarni bir marta olish
         if "test_data" not in st.session_state or st.session_state.get("current_field") != selected_field_name:
@@ -114,10 +124,10 @@ def show_test_page():
 
                 st.write(f"**{i+1}. {question}**")
                 st.radio(
-                    "Вариантнро интиҳоб намоед:",
+                    "Вариантро интиҳоб намоед:",
                     options_list,
                     key=key,
-                    index=0  # default value
+                    index=None  # default value
                 )
                 st.markdown("---")
 
@@ -153,6 +163,12 @@ def show_test_page():
             df_results["score"] = df_results["correct"] / df_results["total"] * 10
             df = pd.merge(df_results, df_topics, on="topic_id")
 
+            #  Foydalanuvchi tanlagan fanni olish
+            #field_id = st.session_state.selected_field_id
+
+            #  Faqat shu fan bo‘yicha data filtrlanadi
+            df = df[df["field_id"] == field_id]
+
             X = df[["difficulty"]]
             y = (df["score"] > 6.5).astype(int)
 
@@ -165,44 +181,51 @@ def show_test_page():
 
                 user_id = st.session_state.user_id
                 user_topics = df[df["user_id"] == user_id]["topic_id"].unique()
-                all_topic_ids = df_topics["topic_id"].unique()
+                all_topic_ids = df_topics[df_topics["field_id"] == field_id]["topic_id"].unique()
                 unseen_topic_ids = list(set(all_topic_ids) - set(user_topics))
 
-                candidate_topics = df_topics[df_topics["topic_id"].isin(unseen_topic_ids)]
+                candidate_topics = df_topics[
+                    #(df_topics["topic_id"].isin(unseen_topic_ids)) &'''
+                    (df_topics["field_id"] == field_id)
+                ]
+
                 X_candidates = scaler.transform(candidate_topics[["difficulty"]])
                 y_pred = model.predict(X_candidates)
+                # Tavsiya qilingan barcha mavzular
                 recommended_topics = candidate_topics[y_pred == 0]
 
-                if not recommended_topics.empty:
+                # Faqat birinchi 5 tasini olish
+                top5_topics = recommended_topics.iloc[:5]  # slicing qilingan
+
+                if not top5_topics.empty:
                     st.markdown("### 🧠 Мавзӯъҳои тавсияшӯда барои омӯзиши шумо:")
-                    for name in recommended_topics["topic_name"].values[:5]:
+                    for name in top5_topics["topic_name"].values:
                         st.markdown(f"🔹 **{name}**")
                 else:
-                    st.info("Ҳамаи мавзӯъҳо аз тарафи шумо хуб  омӯхта шудааст.")
-            else:
-                st.info("Барои тавсия додан маълумоти кофи нест")
+                    st.info("Ҳамаи мавзӯъҳо аз тарафи шумо хуб омӯхта шудааст.")
 
-            # Raqamli resurslar ko‘rsatish
-            if not recommended_topics.empty:
-                st.markdown("### 🧠 Мавзӯҳои тавсияшуда барои омӯхтан:")
-                conn = sqlite3.connect("learning_platform.db")
-                cur = conn.cursor()
+                # Faqat 5 ta mavzuning resurslarini ko‘rsatish
+                if not top5_topics.empty:
+                    st.markdown("### 🔗 Ресурсҳои таълимӣ барои мавзӯъҳои тавсияшуда:")
+                    conn = sqlite3.connect("learning_platform.db")
+                    cur = conn.cursor()
 
-                for _, row in recommended_topics.iterrows():
-                    topic_name = row["topic_name"]
-                    topic_id = row["topic_id"]
+                    for _, row in top5_topics.iterrows():
+                        topic_name = row["topic_name"]
+                        topic_id = row["topic_id"]
 
-                    cur.execute("SELECT url FROM topic_resources WHERE topic_id = ?", (topic_id,))
-                    resource_links = [r[0] for r in cur.fetchall()]
+                        cur.execute("SELECT url FROM topic_resources WHERE topic_id = ?", (topic_id,))
+                        resource_links = [r[0] for r in cur.fetchall()]
 
-                    with st.expander(f"📌 {topic_name} — ресурсҳо"):
-                        if resource_links:
-                            for i, url in enumerate(resource_links, start=1):
-                                st.markdown(f"[🔗 {url}]({url})", unsafe_allow_html=True)
-                        else:
-                            st.write("Ҳоло ресурҳо мавҷуд нест.")
+                        with st.expander(f"📌 {topic_name} — ресурсҳо"):
+                            if resource_links:
+                                for i, url in enumerate(resource_links, start=1):
+                                    st.markdown(f"[🔗 {url}]({url})", unsafe_allow_html=True)
+                            else:
+                                st.write("Ҳоло ресурсҳо мавҷуд нест.")
 
-                conn.close()
+                    conn.close()
+
     elif page == "🏆 Рейтинг":
         st.markdown("---")
         st.subheader("🏆 Рейтинг – Беҳтарин 20 истифодабаранда")

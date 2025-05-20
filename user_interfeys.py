@@ -69,7 +69,7 @@ def get_all_topics():
 
 
 def show_test_page():
-    st.title("👨‍🎓 Платформаи омӯзиши мустақилона")
+    st.title("👨‍🎓 Роҳнамои омӯзиши фардӣ")
     st.subheader(f"Хуш омадед, {st.session_state.username}!")
 
     # Sidebar selectbox yaratamiz

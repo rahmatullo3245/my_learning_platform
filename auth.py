@@ -42,7 +42,7 @@ def authenticate_user(username, password):
 
 # Asosiy ilova
 def show_auth_page():
-    st.set_page_config(page_title="Платформаи омӯзиши шахсӣ", page_icon="📚")
+    st.set_page_config(page_title="Роҳнамои омӯзиши фардӣ", page_icon="📚")
     
     # Session stateda foydalanuvchi ma'lumotlarini saqlash
     if 'user' not in st.session_state:
@@ -50,7 +50,7 @@ def show_auth_page():
     
     # Agar foydalanuvchi login qilmagan bo'lsa
     if not st.session_state.user:
-        st.title("Хуш омадед ба платформаи омӯзиши шахсӣ!")
+        st.title("Хуш омадед ба Роҳнамои омӯзиши фардӣ!")
         
         # Tablar yaratish
         tab1, tab2 = st.tabs(["🔐 Даромад", "📝 Регистратсия"])

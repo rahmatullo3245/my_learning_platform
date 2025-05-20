@@ -3,7 +3,7 @@ import sqlite3
 import hashlib
 from datetime import datetime
 import json
-
+import uuid
 # funksiya baroi ilova kardani fanho
 def add_field(name, description, user_id):
     conn = sqlite3.connect('learning_platform.db')
@@ -17,7 +17,7 @@ def add_field(name, description, user_id):
         st.success("Фан бо  муваффақият илова карда шуд.")
         return True
     except sqlite3.IntegrityError:
-        st.error("Фан аллакай мавҷуд!")
+        st.error("Ин фан аллакай мавҷуд!")
         return False
     finally:
         conn.close()
@@ -132,7 +132,7 @@ def show_admin_dashboard():
                 st.text_input("Номи мавзӯъ", key="tab2_topic_name")
                 st.select_slider("Сатҳи душворӣ", options=list(range(1, 11)), key="tab2_difficulty_level")
 
-                st.markdown("#### 📎 Ресурслаҳо барои мавзӯъ (YouTube, сайт ва ҳ.к.):")
+                st.markdown("#### 📎 Ресурсҳо барои мавзӯъ (YouTube, сайт ва ҳ.к.):")
                 st.text_input("Ресурс 1 (URL):", key="tab2_resource_1")
                 st.text_input("Ресурс 2 (URL):", key="tab2_resource_2")
                 st.text_input("Ресурс 3 (URL):", key="tab2_resource_3")
@@ -150,46 +150,68 @@ def show_admin_dashboard():
                         resource_urls
                     )
                     if success:
-                        # 🧹 Tozalash flagi faollashtiriladi
+                        #  Tozalash flagi faollashtiriladi
                         st.session_state["clear_topic_form_tab2"] = True
                         st.rerun()
 
-
-
      #baroi sohtani forma
+        
     with tab3:
-        fields = get_all_fields()
-        if not fields:
-            st.warning("Аввал фанҳо илова кунед!")
-        else:
-            field = st.selectbox(
-                "Интихоби фан",
-                fields,
-                format_func=lambda x: x[1],
-                key="test_fan_select"
-            )
-            topics = get_topics_by_field(field[0])
-            if not topics:
-                st.warning("Аввал мавзӯъҳо илова кунед!")
+            fields = get_all_fields()
+            if not fields:
+                st.warning("Аввал фанҳо илова кунед!")
             else:
-                with st.form("add_test_form"):
-                    topic = st.selectbox(
-                        "Интихоби мавзӯъ",
-                        topics,
-                        format_func=lambda x: x[1]
-                    )
-                    question = st.text_input("Савол", key="question_text")
-                    
-                    st.write("Вариантҳо:")
-                    options = []
-                    columns = st.columns(2)
-                    for i in range(4):
-                        with columns[i % 2]:
-                            options.append(st.text_input(f"Вариант {i + 1}", key=f"variant_{i}"))
-                    
-                    correct_answer = st.selectbox("Ҷавоби дуруст", options)
-                    
-                    if st.form_submit_button("Иловаи тест"):
-                        add_test(field[0], topic[0], question, options, correct_answer, st.session_state.user_id)
-                        st.session_state["clear_test_form"] = True
-                        st.rerun()
+                field = st.selectbox(
+                    "Интихоби фан",
+                    fields,
+                    format_func=lambda x: x[1],
+                    key="test_fan_select"
+                )
+                topics = get_topics_by_field(field[0])
+                if not topics:
+                    st.warning("Аввал мавзӯъҳо илова кунед!")
+                else:
+                    #  Formani tozalash flagi bo‘lsa, inputlarni tozalaymiz (BEFORE widgets)
+                    if st.session_state.get("clear_test_form", False):
+                        st.session_state["question_text"] = ""
+                        for i in range(4):
+                            st.session_state[f"variant_{i}"] = ""
+                        st.session_state["clear_test_form"] = False  # endi yana ishlamasin
+
+                    with st.form("add_test_form"):
+                        topic = st.selectbox(
+                            "Интихоби мавзӯъ",
+                            topics,
+                            format_func=lambda x: x[1]
+                        )
+
+                        question = st.text_input("Савол", key="question_text")
+
+                        st.write("Вариантҳо:")
+                        options = []
+                        columns = st.columns(2)
+                        for i in range(4):
+                            with columns[i % 2]:
+                                options.append(st.text_input(f"Вариант {i + 1}", key=f"variant_{i}"))
+
+                        # Selectbox faqat 4 ta to‘liq variant bo‘lsa chiqadi
+                        correct_answer = None
+                        if all(options):
+                            correct_answer = st.selectbox("Ҷавоби дуруст", options, index=None, placeholder="Ҷавоби дуруст")
+
+                        submitted = st.form_submit_button("Иловаи тест")
+
+                        if submitted:
+                            if not question.strip():
+                                st.error("Саволро ворид намоед!")
+                            elif not all(options):
+                                st.error("Ҳамаи варианҳоро доҳил кунед!")
+                            elif correct_answer is None:
+                                st.error("Ҷавоби дурустро интихоб намоед!")
+                            else:
+                                add_test(field[0], topic[0], question.strip(), options, correct_answer, st.session_state.user_id)
+                                st.success("Тест бомуваффақият илова шуд.")
+
+                                # Belgilaymizki: keyingi rerun da formani tozalash kerak
+                                st.session_state["clear_test_form"] = True
+                                st.rerun()

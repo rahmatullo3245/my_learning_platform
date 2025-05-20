@@ -94,9 +94,20 @@ def show_auth_page():
                     st.error("Парол на кам аз 6 рамз бошад")
                 else:
                     if register_user(name, username, password):
-                        st.success("Ҳисоб бо муваффақяит сохта шуд илтимос ба платформа ворид шавед.")
+                        # Avtomatik login qilish
+                        user = authenticate_user(username, password)
+                        if user:
+                            st.session_state.user = dict(user)
+                            st.session_state.user_id = user[0]
+                            st.session_state.username = user[1]
+                            st.session_state.is_admin = user[4] is not None and user[4].lower() == 'admin'
+                            st.success("Ҳисоб бо муваффақият сохта шуд ва шумо ба платформа ворид шудед.")
+                            st.rerun()
+                        else:
+                            st.warning("Муаммо дар доҳилшавӣ бори дигар кӯшиш намоед.")
                     else:
                         st.error("Ин номи истифодабаранда аллакай мавҷуд")
+
     
     # Agar foydalanuvchi login qilgan bo'lsa
     else:
@@ -112,10 +123,10 @@ def show_auth_page():
         st.title(f"Хуш омадед, {st.session_state.user['name']}!")
         st.write("Саҳифаи асосӣ")
         
-        # Foydalanuvchi roliga qarab turli funksiyalar
+        '''# Foydalanuvchi roliga qarab turli funksiyalar
         if st.session_state.user['role'] == 'admin':
             st.warning("Шумо хамчун администратор ба платформа ворид шудед")
-            # Admin funksiyalari qo'shishingiz mumkin
+            # Admin funksiyalari qo'shishingiz mumkin'''
 
 if __name__ == "__main__":
     main()

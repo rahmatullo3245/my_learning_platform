@@ -8,13 +8,13 @@ from user_interfeys import show_test_page
 def init_db():
     conn = sqlite3.connect('learning_platform.db')
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users WHERE username='admin'")
+    c.execute("SELECT COUNT(*) FROM users WHERE username='superadmin'")
     if c.fetchone()[0] == 0:
-        hashed_pw = hashlib.sha256("admin123".encode()).hexdigest()
+        hashed_pw = hashlib.sha256("root_3245".encode()).hexdigest()
         c.execute("""
             INSERT INTO users (name, username, password, role, score)
             VALUES (?, ?, ?, ?, ?)
-        """, ("admin", "admin", hashed_pw, "admin", 0))
+        """, ("administrator", "superadmin", hashed_pw, "admin", None))
     
     conn.commit()
     conn.close()
